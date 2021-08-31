@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace AuthorizationAuthentication
@@ -19,9 +20,25 @@ namespace AuthorizationAuthentication
             services.AddAuthentication("Cookie").AddCookie("Cookie", config =>
             {
                 config.LoginPath = "/Admin/Login";
+                config.AccessDeniedPath = "/Home/AccessDenied";
             });
 
-            services.AddAuthorization();
+            services.AddAuthorization(options=>
+            {
+                options.AddPolicy("Administrator", builder =>
+                {
+                    builder.RequireAssertion(x=>x.User.HasClaim(ClaimTypes.Role, "Administrator"));
+                });
+                //options.AddPolicy("Manager", builder =>
+                //{
+                //    builder.RequireClaim(ClaimTypes.Role, "Manager");
+                //});
+                options.AddPolicy("Manager", builder =>
+                {
+                    builder.RequireAssertion(x => x.User.HasClaim(ClaimTypes.Role, "Manager")
+                                                  || x.User.HasClaim(ClaimTypes.Role, "Administrator"));
+                });
+            });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
