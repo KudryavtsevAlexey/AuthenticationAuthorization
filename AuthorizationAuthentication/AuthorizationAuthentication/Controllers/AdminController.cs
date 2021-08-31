@@ -3,16 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using AuthorizationAuthentication.Data;
 using AuthorizationAuthentication.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AuthorizationAuthentication.Controllers
 {
     [Authorize]
     public class AdminController : Controller
     {
+        private readonly ApplicationDbContext _dbContext;
+
+        public AdminController(ApplicationDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
         public IActionResult Index()
         {
             return View();
@@ -45,16 +53,24 @@ namespace AuthorizationAuthentication.Controllers
                 return View(model);
             }
 
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, model.UserName),
-                new Claim(ClaimTypes.Role, "Administrator"),
-            };
+            var user = await _dbContext.Users.SingleOrDefaultAsync(u =>
+                u.UserName == model.UserName && u.Password == model.Password);
 
-            var claimIdentity = new ClaimsIdentity(claims, "Cookie");
-            var claimPrincipal = new ClaimsPrincipal(claimIdentity);
-            await HttpContext.SignInAsync("Cookie", claimPrincipal);
-            return Redirect(model.ReturnUrl);
+            if (user!=null)
+            {
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, model.UserName),
+                    new Claim(ClaimTypes.Role, "Administrator"),
+                };
+
+                var claimIdentity = new ClaimsIdentity(claims, "Cookie");
+                var claimPrincipal = new ClaimsPrincipal(claimIdentity);
+                await HttpContext.SignInAsync("Cookie", claimPrincipal);
+                return Redirect(model.ReturnUrl);
+            }
+            ModelState.AddModelError("","User not found");
+            return View(model);
         }
 
         public async Task<IActionResult> Logout()

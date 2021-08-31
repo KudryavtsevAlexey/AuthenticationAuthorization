@@ -6,6 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AuthorizationAuthentication.Data;
+using AuthorizationAuthentication.Entities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AuthorizationAuthentication
 {
@@ -23,4 +26,5 @@ namespace AuthorizationAuthentication
                     webBuilder.UseStartup<Startup>();
                 });
     }
+
 }
