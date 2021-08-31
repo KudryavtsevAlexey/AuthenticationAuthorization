@@ -1,58 +1,53 @@
+using System.Security.Claims;
+using AuthorizationAuthentication.Data;
+using AuthorizationAuthentication.Entities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using AuthorizationAuthentication.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace AuthorizationAuthentication
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
-        public IConfiguration Configuration { get; }
-
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<ApplicationDbContext>(options =>
+            services.AddDbContext<ApplicationDbContext>(config =>
             {
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
-            });
-            services.AddControllersWithViews();
-
-            services.AddAuthentication("Cookie").AddCookie("Cookie", config =>
+                config.UseInMemoryDatabase("MEMORY");
+            })
+                .AddIdentity<ApplicationUser, ApplicationRole>(config =>
+                {
+                    config.Password.RequireDigit = false;
+                    config.Password.RequireLowercase = false;
+                    config.Password.RequireNonAlphanumeric = false;
+                    config.Password.RequireUppercase = false;
+                    config.Password.RequiredLength = 6;
+                })
+                .AddEntityFrameworkStores<ApplicationDbContext>();
+            services.ConfigureApplicationCookie(config =>
             {
                 config.LoginPath = "/Admin/Login";
                 config.AccessDeniedPath = "/Home/AccessDenied";
             });
 
-            services.AddAuthorization(options=>
+            services.AddAuthorization(options =>
             {
                 options.AddPolicy("Administrator", builder =>
                 {
-                    builder.RequireAssertion(x=>x.User.HasClaim(ClaimTypes.Role, "Administrator"));
+                    builder.RequireClaim(ClaimTypes.Role, "Administrator");
                 });
-                //options.AddPolicy("Manager", builder =>
-                //{
-                //    builder.RequireClaim(ClaimTypes.Role, "Manager");
-                //});
+
                 options.AddPolicy("Manager", builder =>
                 {
                     builder.RequireAssertion(x => x.User.HasClaim(ClaimTypes.Role, "Manager")
                                                   || x.User.HasClaim(ClaimTypes.Role, "Administrator"));
                 });
+
             });
+
+            services.AddControllersWithViews();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

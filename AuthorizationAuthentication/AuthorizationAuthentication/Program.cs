@@ -1,22 +1,21 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using AuthorizationAuthentication;
 using AuthorizationAuthentication.Data;
-using AuthorizationAuthentication.Entities;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-namespace AuthorizationAuthentication
+namespace Authorization.Database
 {
     public class Program
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            var host = CreateHostBuilder(args).Build();
+            using (var scope = host.Services.CreateScope())
+            {
+                DatabaseInitializer.Init(scope.ServiceProvider);
+            }
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -26,5 +25,4 @@ namespace AuthorizationAuthentication
                     webBuilder.UseStartup<Startup>();
                 });
     }
-
 }

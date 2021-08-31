@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AuthorizationAuthentication.Entities
 {
-    public class ApplicationUser : IdentityUser<Guid>
+    public class ApplicationRole : IdentityRole<Guid>
     {
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
     }
 }

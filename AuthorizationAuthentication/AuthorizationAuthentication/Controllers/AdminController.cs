@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AuthorizationAuthentication.Data;
+using AuthorizationAuthentication.Entities;
 using AuthorizationAuthentication.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,37 +15,39 @@ namespace AuthorizationAuthentication.Controllers
     [Authorize]
     public class AdminController : Controller
     {
-        private readonly ApplicationDbContext _dbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AdminController(ApplicationDbContext dbContext)
+        public AdminController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
         {
-            _dbContext = dbContext;
+            _userManager = userManager;
+            _signInManager = signInManager;
         }
         public IActionResult Index()
         {
             return View();
         }
-        
-        [Authorize(Policy ="Administrator")]
+
+        [Authorize(Policy = "Administrator")]
         public IActionResult Administrator()
         {
             return View();
         }
 
-        [Authorize(Policy ="Manager")]
+        [Authorize(Policy = "Manager")]
         public IActionResult Manager()
         {
             return View();
         }
 
-
-        [AllowAnonymous, HttpGet]
+        [AllowAnonymous]
         public IActionResult Login(string returnUrl)
         {
             return View();
         }
 
-        [AllowAnonymous, HttpPost]
+        [HttpPost]
+        [AllowAnonymous]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (!ModelState.IsValid)
@@ -53,30 +55,29 @@ namespace AuthorizationAuthentication.Controllers
                 return View(model);
             }
 
-            var user = await _dbContext.Users.SingleOrDefaultAsync(u =>
-                u.UserName == model.UserName && u.Password == model.Password);
+            var user = await _userManager.FindByNameAsync(model.UserName);
 
-            if (user!=null)
+            if (user==null)
             {
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, model.UserName),
-                    new Claim(ClaimTypes.Role, "Administrator"),
-                };
-
-                var claimIdentity = new ClaimsIdentity(claims, "Cookie");
-                var claimPrincipal = new ClaimsPrincipal(claimIdentity);
-                await HttpContext.SignInAsync("Cookie", claimPrincipal);
-                return Redirect(model.ReturnUrl);
+                ModelState.AddModelError("", "User not found");
+                return View(model);
             }
-            ModelState.AddModelError("","User not found");
+
+            var result = await _signInManager.PasswordSignInAsync(user, model.Password, false,false);
+
+            if (result.Succeeded)
+            {
+                _userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "Administrator")).GetAwaiter().GetResult(); 
+                return RedirectToAction(model.ReturnUrl);
+            }
+
             return View(model);
         }
 
-        public async Task<IActionResult> Logout()
+        public IActionResult Logout()
         {
-            await HttpContext.SignOutAsync("Cookie");
-            return RedirectToAction("Index", "Home");
+            HttpContext.SignOutAsync("Cookie");
+            return Redirect("/Home/Index");
         }
     }
 }
