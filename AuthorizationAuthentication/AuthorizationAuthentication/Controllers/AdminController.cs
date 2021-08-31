@@ -67,16 +67,15 @@ namespace AuthorizationAuthentication.Controllers
 
             if (result.Succeeded)
             {
-                _userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "Administrator")).GetAwaiter().GetResult(); 
-                return RedirectToAction(model.ReturnUrl);
+                return RedirectToAction("Index", "Admin");
             }
 
             return View(model);
         }
 
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
-            HttpContext.SignOutAsync("Cookie");
+            await _signInManager.SignOutAsync();
             return Redirect("/Home/Index");
         }
     }
